@@ -5,35 +5,30 @@ using namespace std;
 
 class game_field {
 public:
-    game_field(size_t size) : m_size(size), m_grids(size*size) {};
+    game_field(size_t size) : m_grids(size, vector<char>(size)) {};
     ~game_field() {};
 
-    size_t size() const { return m_size; }
-    bool is_mine(size_t x, size_t y) const;
+    size_t size() const { return m_grids.size(); }
+    bool is_mine(size_t x, size_t y) const { return (x >= 0 && x < size() && y >= 0 && y < size()) ? (m_grids[x][y] == '*') : false; }
 
     friend istream & operator >> (std::istream &is, game_field &rhs);
 
 private:
-    size_t m_size;
-    vector<char> m_grids;
+    vector< vector<char> > m_grids;
 };
 
-bool game_field::is_mine(size_t x, size_t y) const {
-    if(x < 0 || x >= m_size || y < 0 || y >= m_size) return false;
-    size_t position = y*m_size + x;
-    return m_grids[position] == '*';
-}
-
 istream & operator >> (std::istream &is, game_field &rhs) {
-    for(size_t g = 0; g < rhs.m_grids.size(); ++g) {
-        is >> rhs.m_grids[g];
+    for(size_t y = 0; y < rhs.size(); ++y) {
+        for(size_t x = 0; x < rhs.size(); ++x) {
+            is >> rhs.m_grids[x][y];
+        }
     }
     return is;
 };
 
 class sweeper {
 public:
-    sweeper(const game_field& field) : m_field(field), m_report(field.size() * field.size()), m_exploded(false) {}
+    sweeper(const game_field& field) : m_field(field), m_report(field.size(), vector<char>(field.size())), m_exploded(false) {}
     ~sweeper() {}
 
     void read_instruction(istream& is);
@@ -46,46 +41,46 @@ private:
 
 private:
     const game_field& m_field;
-    vector<char> m_report;
+    vector< vector<char> > m_report;
     bool m_exploded;
 };
 
 void sweeper::sweep(size_t x, size_t y) {
-    size_t position = y * m_field.size() + x;
     if(m_field.is_mine(x, y)) {
-        m_report[position] = '*';
+        m_report[x][y] = '*';
         m_exploded = true;
     }
     else {
-        m_report[position] = '0';
-        if(m_field.is_mine(x-1, y-1)) m_report[position]++;
-        if(m_field.is_mine(x, y-1)) m_report[position]++;
-        if(m_field.is_mine(x+1, y-1)) m_report[position]++;
-        if(m_field.is_mine(x-1, y)) m_report[position]++;
-        if(m_field.is_mine(x+1, y)) m_report[position]++;
-        if(m_field.is_mine(x-1, y+1)) m_report[position]++;
-        if(m_field.is_mine(x, y+1)) m_report[position]++;
-        if(m_field.is_mine(x+1, y+1)) m_report[position]++;
+        m_report[x][y] = '0';
+        if(m_field.is_mine(x-1, y-1)) m_report[x][y]++;
+        if(m_field.is_mine(x, y-1)) m_report[x][y]++;
+        if(m_field.is_mine(x+1, y-1)) m_report[x][y]++;
+        if(m_field.is_mine(x-1, y)) m_report[x][y]++;
+        if(m_field.is_mine(x+1, y)) m_report[x][y]++;
+        if(m_field.is_mine(x-1, y+1)) m_report[x][y]++;
+        if(m_field.is_mine(x, y+1)) m_report[x][y]++;
+        if(m_field.is_mine(x+1, y+1)) m_report[x][y]++;
     }
 }
 
 void sweeper::peek(size_t x, size_t y) {
-    m_report[y * field_size() + x] = m_field.is_mine(x, y) ? '*' : '.';
+    m_report[x][y] = m_field.is_mine(x, y) ? '*' : '.';
 }
 
 void sweeper::get_report(ostream& os) {
-    for(size_t r = 0; r < m_report.size(); ++r) {
-        os << ((m_report[r] == '*' && !m_exploded) ? '.' : m_report[r]);
-        if((r+1) % field_size() == 0) os << endl;
+    for(size_t y = 0; y < m_report.size(); ++y) {
+        for(size_t x = 0; x < m_report.size(); ++x) {
+            os << ((m_report[x][y] == '*' && !m_exploded) ? '.' : m_report[x][y]);
+        }
+        os << endl;
     }
 }
 
 void sweeper::read_instruction(std::istream &is) {
     for(size_t y = 0; y < field_size(); ++y) {
         for(size_t x = 0; x < field_size(); ++x) {
-            char operation = '.';
-            is >> operation;
-            (operation == 'x') ? sweep(x, y) : peek(x, y);
+            is >> m_report[x][y];
+            (m_report[x][y] == 'x') ? sweep(x, y) : peek(x, y);
         }
     }
 };
