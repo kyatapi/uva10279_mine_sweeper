@@ -3,26 +3,6 @@
 
 using namespace std;
 
-class grid {
-public:
-    grid() {}
-    ~grid() {}
-
-    bool is_mine() const { return m_is_mine; }
-
-    friend istream & operator >> (std::istream &is, grid &rhs);
-
-private:
-    bool m_is_mine;
-};
-
-istream & operator >> (std::istream &is, grid &rhs) {
-    char token = '.';
-    is >> token;
-    rhs.m_is_mine = token == '*';
-    return is;
-};
-
 class game_field {
 public:
     game_field(size_t size) : m_size(size), m_grids(size*size) {};
@@ -35,13 +15,13 @@ public:
 
 private:
     size_t m_size;
-    vector<grid> m_grids;
+    vector<char> m_grids;
 };
 
 bool game_field::is_mine(size_t x, size_t y) const {
     if(x < 0 || x >= m_size || y < 0 || y >= m_size) return false;
     size_t position = y*m_size + x;
-    return m_grids[position].is_mine();
+    return m_grids[position] == '*';
 }
 
 istream & operator >> (std::istream &is, game_field &rhs) {
@@ -56,10 +36,13 @@ public:
     sweeper(const game_field& field) : m_field(field), m_report(field.size() * field.size()), m_exploded(false) {}
     ~sweeper() {}
 
-    void sweep(size_t x, size_t y);
-    void peek(size_t x, size_t y);
+    void read_instruction(istream& is);
     void get_report(ostream& os);
     size_t field_size() const { return m_field.size(); }
+
+private:
+    void sweep(size_t x, size_t y);
+    void peek(size_t x, size_t y);
 
 private:
     const game_field& m_field;
@@ -97,20 +80,14 @@ void sweeper::get_report(ostream& os) {
     }
 }
 
-istream & operator >> (std::istream &is, sweeper &rhs) {
-    for(size_t y = 0; y < rhs.field_size(); ++y) {
-        for(size_t x = 0; x < rhs.field_size(); ++x) {
+void sweeper::read_instruction(std::istream &is) {
+    for(size_t y = 0; y < field_size(); ++y) {
+        for(size_t x = 0; x < field_size(); ++x) {
             char operation = '.';
             is >> operation;
-            if(operation == 'x') {
-                rhs.sweep(x, y);
-            }
-            else {
-                rhs.peek(x, y);
-            }
+            (operation == 'x') ? sweep(x, y) : peek(x, y);
         }
     }
-    return is;
 };
 
 void test_case() {
@@ -119,7 +96,7 @@ void test_case() {
     game_field field(field_size);
     cin >> field;
     sweeper explorer(field);
-    cin >> explorer;
+    explorer.read_instruction(cin);
     explorer.get_report(cout);
 }
 
